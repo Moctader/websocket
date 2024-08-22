@@ -98,4 +98,4 @@ def start_polling():
 if __name__ == "__main__":
     create_table()
     get_historical_data()  # Fetch and store historical data once
-    start_polling()  # Start polling for new data
+    #start_polling()  # Start polling for new data
