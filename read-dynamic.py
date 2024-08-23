@@ -2,9 +2,10 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 import psycopg2
-from evidently.report import Report
-from evidently.metric_preset import DataDriftPreset
-from evidently import ColumnMapping
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.stats import ks_2samp
+
 
 # Database connection parameters
 conn_params = {
@@ -23,11 +24,33 @@ def read_data():
     conn.close()
     return df
 
-def generate_data_drift_report(reference_data, current_data, column_mapping):
-    """Generate a data drift report using Evidently with column mapping."""
-    report = Report(metrics=[DataDriftPreset()])
-    report.run(reference_data=reference_data, current_data=current_data, column_mapping=column_mapping)
-    report.save_html("data_drift_report.html")
+def plot_distributions(reference_data, current_data):
+    """Plot datetime vs close for reference and current data."""
+    plt.figure(figsize=(14, 7))
+
+    # Plot reference data
+    sns.lineplot(x=reference_data['datetime'], y=reference_data['close'], label='Reference', color='blue')
+
+    # Plot current data
+    sns.lineplot(x=current_data['datetime'], y=current_data['close'], label='Current', color='red')
+
+    plt.legend()
+    plt.title("Datetime vs Close")
+    plt.xlabel("Datetime")
+    plt.ylabel("Close")
+    plt.xticks(rotation=45)
+    plt.show()
+
+
+def ks_test(reference_data, current_data):
+    """Apply KS test to each feature to detect drift."""
+    drift_results = {}
+    for column in reference_data.columns:
+        if pd.api.types.is_numeric_dtype(reference_data[column]):
+            ks_stat, p_value = ks_2samp(reference_data[column], current_data[column])
+            drift_results[column] = {'ks_stat': ks_stat, 'p_value': p_value}
+    return drift_results
+
 
 if __name__ == "__main__":
     # Read the data from the database
@@ -38,20 +61,16 @@ if __name__ == "__main__":
 
     # Filter the most recent day's data as current data
     last_day = df[df['datetime'].dt.date == df['datetime'].dt.date.max()]
+    # print(last_day)
+    # print("Last day data filtered.")
 
     # Filter all data before the most recent day as reference data
     previous_data = df[df['datetime'].dt.date < df['datetime'].dt.date.max()]
+    # print(previous_data)
+    plot_distributions(previous_data, last_day)
+    ks_results = ks_test(previous_data, last_day)
+    print("KS Test Results:\n", ks_results)
 
-    # Define column mapping
-    column_mapping = ColumnMapping(
-        target=None,  # Set the target column if you have one
-        prediction=None,  # Set the prediction column if you have one
-        datetime="datetime",  # Specify the datetime column
-        numerical_features=['open', 'high', 'low', 'close', 'volume'],  # List of numerical features
-        categorical_features=None  # List of categorical features, if any
-    )
 
-    # Generate data drift report
-    generate_data_drift_report(reference_data=previous_data, current_data=last_day, column_mapping=column_mapping)
 
-    print("Data drift report generated and saved as 'data_drift_report.html'.")
+

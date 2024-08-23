@@ -9,7 +9,7 @@ conn_params = {
     'dbname': 'your_database',
     'user': 'your_user',
     'password': 'your_password',
-    'host': 'localhost',  # Assuming you are running the script on the same machine as Docker
+    'host': 'localhost',
     'port': '5432'
 }
 
