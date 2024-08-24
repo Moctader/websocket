@@ -5,7 +5,21 @@ import psycopg2
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import ks_2samp
-
+import time
+import pandas as pd
+import numpy as np
+import requests
+import zipfile
+import io
+from sklearn import ensemble
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from datetime import datetime, time
+from sklearn import datasets, ensemble
+from evidently.metric_preset import DataDriftPreset
+from evidently import ColumnMapping
+from evidently.report import Report
+from evidently.metric_preset import DataDriftPreset, TargetDriftPreset, RegressionPreset
+import webbrowser
 
 # Database connection parameters
 conn_params = {
@@ -41,7 +55,6 @@ def plot_distributions(reference_data, current_data):
     plt.xticks(rotation=45)
     plt.show()
 
-
 def ks_test(reference_data, current_data):
     """Apply KS test to each feature to detect drift."""
     drift_results = {}
@@ -51,6 +64,23 @@ def ks_test(reference_data, current_data):
             drift_results[column] = {'ks_stat': ks_stat, 'p_value': p_value}
     return drift_results
 
+def get_dataset_drift_report(
+    reference: pd.DataFrame, current: pd.DataFrame, column_mapping: ColumnMapping
+):
+    """
+    Returns True if Data Drift is detected, else returns False.
+    If get_ratio is True, returns the share of drifted features.
+    """
+    data_drift_report = Report(metrics=[DataDriftPreset()])
+    data_drift_report.run(
+        reference_data=reference, current_data=current, column_mapping=column_mapping
+    )
+    
+    return data_drift_report
+
+def detect_dataset_drift(report: Report):
+    print(report.as_dict())
+    return report.as_dict()["metrics"][0]["result"]["dataset_drift"]
 
 if __name__ == "__main__":
     # Read the data from the database
@@ -60,17 +90,42 @@ if __name__ == "__main__":
     df['datetime'] = pd.to_datetime(df['datetime'])
 
     # Filter the most recent day's data as current data
-    last_day = df[df['datetime'].dt.date == df['datetime'].dt.date.max()]
-    # print(last_day)
-    # print("Last day data filtered.")
+    df['datetime'] = pd.to_datetime(df['datetime'])
+    df.set_index('datetime', inplace=True)
 
-    # Filter all data before the most recent day as reference data
-    previous_data = df[df['datetime'].dt.date < df['datetime'].dt.date.max()]
-    # print(previous_data)
-    plot_distributions(previous_data, last_day)
-    ks_results = ks_test(previous_data, last_day)
-    print("KS Test Results:\n", ks_results)
+    # Correctly slice the DataFrame with the appropriate date range
+    reference = df.loc['2024-04-25 08:01:00':'2024-08-22 23:00:00']
+    current = df.loc['2024-08-23 00:00:00':'2024-08-23 23:00:00']
 
+    target='close'
+    prediction='prediction'
+    numerical_features = ['open', 'high', 'low', 'volume', 'previous_close']
+    categorical_features = []
 
+    regressor = ensemble.RandomForestRegressor(random_state = 0, n_estimators = 50)
+    regressor.fit(reference[numerical_features + categorical_features], reference[target])
+    ref_prediction = regressor.predict(reference[numerical_features + categorical_features])
+    current_prediction = regressor.predict(current[numerical_features + categorical_features])
+    
+    reference['prediction'] = ref_prediction
+    current['prediction'] = current_prediction
 
+    column_mapping = ColumnMapping()
+    column_mapping.target = target
+    column_mapping.prediction = prediction
+    column_mapping.numerical_features = numerical_features
+    column_mapping.categorical_features = categorical_features
 
+    report = get_dataset_drift_report(reference, current, column_mapping)
+    drift_detected = detect_dataset_drift(report)
+   
+    if drift_detected:
+        print("Detect dataset drift between")
+    else:
+        print("Detect no dataset drift between")
+
+    # Save the report to an HTML file
+    report.save_html("data_drift_report.html")
+
+    # Open the report in the default web browser
+    webbrowser.open("data_drift_report.html")
