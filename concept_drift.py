@@ -69,6 +69,56 @@ def cusum_drift_detection(reference_data, current_data, threshold=0.5, drift_thr
             return True
 
     return False
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import train_test_split
+
+def linear_regression_drift_detection(reference_data, current_data, error_threshold=0.1, test_size=0.2, random_state=None):
+    """
+    Train a linear regression model on a split of the reference data and predict on the current data.
+    Detect concept drift based on prediction error.
+    
+    Parameters:
+    - reference_data: pd.DataFrame - The historical data used to train the model.
+    - current_data: pd.DataFrame - The new data on which to predict and detect drift.
+    - error_threshold: float - The threshold above which drift is detected.
+    - test_size: float - The proportion of the reference data to include in the test split.
+    - random_state: int or None - Random seed for reproducibility of the train-test split.
+    
+    Returns:
+    - drift_detected: bool - True if drift is detected, False otherwise.
+    """
+    # Define the target column
+    target_column = 'close'
+    
+    # Split the reference data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        reference_data.drop(columns=[target_column]), 
+        reference_data[target_column], 
+        test_size=test_size, 
+        random_state=random_state
+    )
+    
+    # Train the linear regression model on the training data
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    
+    # Optionally, evaluate the model on the test data (for internal validation)
+    test_predictions = model.predict(X_test)
+    test_error = mean_absolute_error(y_test, test_predictions)
+    print(f"Mean Absolute Error on reference test set: {test_error}")
+    
+    # Predict the 'close' values for the current data using its features
+    predictions = model.predict(current_data.drop(columns=[target_column]))
+    
+    # Calculate the mean absolute error between the actual and predicted 'close' values for the current data
+    error = mean_absolute_error(current_data[target_column], predictions)
+    print(f"Mean Absolute Error on current data: {error}")
+    
+    # Check if the error exceeds the threshold to detect drift
+    drift_detected = error > error_threshold
+    
+    return drift_detected
 
 if __name__ == "__main__":
     # Read the data from the database
@@ -92,6 +142,22 @@ if __name__ == "__main__":
     # Filter the DataFrame to get the reference data
     reference = df.loc[reference_start_date:reference_end_date]
 
+
+    drift_detected=linear_regression_drift_detection(reference, current)
+    if drift_detected:
+        print(f"Concept drift detected on {latest_date.strftime('%Y-%m-%d')}, retraining the model...")
+
+        # Train a new model using the combined reference and current data
+        new_data = pd.concat([reference, current])
+        model = RandomForestRegressor()
+        model.fit(new_data.drop(columns=['close']), new_data['close'])
+        
+        # Save and deploy the new model
+        joblib.dump(model, 'stock_model1_updated.pkl')
+
+    
+
+
     # # Check for concept drift using PCA-based detection
     # drift_detected = pca_drift_detection(reference, current)
 
@@ -107,19 +173,22 @@ if __name__ == "__main__":
     #     joblib.dump(model, 'stock_model_updated.pkl')
     # else:
     #     print("No concept drift detected. No retraining necessary.")
-        # Check for concept drift using CUSUM-based detection
-    drift_detected = cusum_drift_detection(reference, current)
+    
+    
+    
+    #Check for concept drift using CUSUM-based detection
+    #drift_detected = cusum_drift_detection(reference, current)
 
-    if drift_detected:
-        print(f"Concept drift detected on {latest_date.strftime('%Y-%m-%d')}, retraining the model...")
+    # if drift_detected:
+    #     print(f"Concept drift detected on {latest_date.strftime('%Y-%m-%d')}, retraining the model...")
 
-        # Train a new model using the combined reference and current data
-        new_data = pd.concat([reference, current])
-        model = RandomForestRegressor()
-        model.fit(new_data.drop(columns=['close']), new_data['close'])
+    #     # Train a new model using the combined reference and current data
+    #     new_data = pd.concat([reference, current])
+    #     model = RandomForestRegressor()
+    #     model.fit(new_data.drop(columns=['close']), new_data['close'])
         
-        # Save and deploy the new model
-        joblib.dump(model, 'stock_model_updated.pkl')
-    else:
-        print("No concept drift detected. No retraining necessary.")
+    #     # Save and deploy the new model
+    #     joblib.dump(model, 'stock_model_updated.pkl')
+    # else:
+    #     print("No concept drift detected. No retraining necessary.")
 
