@@ -129,3 +129,4 @@ if __name__ == "__main__":
 
     # Open the report in the default web browser
     webbrowser.open("data_drift_report.html")
+    print("unnecesstary")
