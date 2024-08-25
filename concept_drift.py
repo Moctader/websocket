@@ -1,6 +1,14 @@
 import psycopg2
 import pandas as pd
 from datetime import datetime, timedelta
+import pandas as pd
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error
+import joblib
+from datetime import timedelta
+import numpy as np
+
 
 # Database connection parameters
 conn_params = {
@@ -18,6 +26,49 @@ def read_data():
     df = pd.read_sql_query(query, conn)
     conn.close()
     return df
+
+
+def pca_drift_detection(reference_data, current_data, variance_threshold=0.95, threshold=0.1):
+    """
+    Perform PCA on the reference data and check for drift in the current data.
+    """
+    pca = PCA(n_components=variance_threshold)
+    pca.fit(reference_data.drop(columns=['close']))
+    reference_components = pca.transform(reference_data.drop(columns=['close']))
+
+    # Transform current data using PCA
+    current_components = pca.transform(current_data.drop(columns=['close']))
+
+    # Check for drift in the principal components
+    drift_detected = np.any(
+        np.abs(reference_components.mean(axis=0) - current_components.mean(axis=0)) > threshold
+    )
+    
+    return drift_detected
+
+def cusum_drift_detection(reference_data, current_data, threshold=0.5, drift_threshold=5):
+    """
+    Perform CUSUM-based drift detection on the current data compared to the reference data.
+    """
+    s_positive = 0
+    s_negative = 0
+    
+    # Calculate the mean of the reference data
+    reference_mean = reference_data['close'].mean()
+
+    # Track cumulative sum for the current data
+    for i, row in current_data.iterrows():
+        error = row['close'] - reference_mean
+        
+        # Update the cumulative sums
+        s_positive = max(0, s_positive + error - threshold)
+        s_negative = max(0, s_negative - error - threshold)
+
+        # Check if either sum exceeds the drift threshold
+        if s_positive > drift_threshold or s_negative > drift_threshold:
+            return True
+
+    return False
 
 if __name__ == "__main__":
     # Read the data from the database
@@ -40,9 +91,35 @@ if __name__ == "__main__":
     
     # Filter the DataFrame to get the reference data
     reference = df.loc[reference_start_date:reference_end_date]
-    
-    # Print the current and reference data
-    print("Current data:")
-    print(current.head())
-    print("Reference data:")
-    print(reference.tail())
+
+    # # Check for concept drift using PCA-based detection
+    # drift_detected = pca_drift_detection(reference, current)
+
+    # if drift_detected:
+    #     print(f"Concept drift detected on {latest_date.strftime('%Y-%m-%d')}, retraining the model...")
+
+    #     # Train a new model using the combined reference and current data
+    #     new_data = pd.concat([reference, current])
+    #     model = RandomForestRegressor()
+    #     model.fit(new_data.drop(columns=['close']), new_data['close'])
+        
+    #     # Save and deploy the new model
+    #     joblib.dump(model, 'stock_model_updated.pkl')
+    # else:
+    #     print("No concept drift detected. No retraining necessary.")
+        # Check for concept drift using CUSUM-based detection
+    drift_detected = cusum_drift_detection(reference, current)
+
+    if drift_detected:
+        print(f"Concept drift detected on {latest_date.strftime('%Y-%m-%d')}, retraining the model...")
+
+        # Train a new model using the combined reference and current data
+        new_data = pd.concat([reference, current])
+        model = RandomForestRegressor()
+        model.fit(new_data.drop(columns=['close']), new_data['close'])
+        
+        # Save and deploy the new model
+        joblib.dump(model, 'stock_model_updated.pkl')
+    else:
+        print("No concept drift detected. No retraining necessary.")
+
