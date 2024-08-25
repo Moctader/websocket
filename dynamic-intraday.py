@@ -108,4 +108,4 @@ while True:
         print(f"An error occurred: {e}")
 
     # Sleep for a specified interval before fetching the data again
-    time.sleep(3600)  # Sleep for 1 hour
+    time.sleep(24*3600)  # Sleep for 1 hour
