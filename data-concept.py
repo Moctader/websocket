@@ -138,12 +138,12 @@ def feature_distribution_drift(reference_data, current_data, alpha=0.05):
     """
     drift_detected = False
     for column in reference_data.columns:
-        if column != 'close':
-            stat, p_value = ks_2samp(reference_data[column], current_data[column])
-            print(f"KS test for {column}: p-value = {p_value}")
-            if p_value < alpha:
-                drift_detected = True
-                break
+        #if column != 'close':
+        stat, p_value = ks_2samp(reference_data[column], current_data[column])
+        print(f"KS test for {column}: p-value = {p_value}")
+        if p_value < alpha:
+            drift_detected = True
+            break
     return drift_detected
 
 if __name__ == "__main__":

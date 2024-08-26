@@ -133,6 +133,7 @@ if __name__ == "__main__":
     # Filter the DataFrame to get the current window data
     current_start_date = latest_date - timedelta(days=window_size)
     current = df.loc[current_start_date:latest_date]
+    print(current)
     
     # Define the reference date range (e.g., last 365 days excluding the current window)
     reference_start_date = latest_date - timedelta(days=365 + window_size)
