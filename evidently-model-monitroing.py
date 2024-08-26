@@ -70,17 +70,18 @@ def get_model_performance_report(reference: pd.DataFrame, current: pd.DataFrame,
     """Returns a model performance report."""
     model_performance_report = Report(metrics=[RegressionPreset()])
     model_performance_report.run(reference_data=reference, current_data=current, column_mapping=column_mapping)
+ 
     return model_performance_report
 
 def detect_dataset_drift(report: Report):
     """Detect dataset drift from the report."""
     print(report.as_dict())
+    print(report.as_dict()["metrics"][0]["result"]["share_of_drifted_columns"])
     return report.as_dict()["metrics"][0]["result"]["dataset_drift"]
 
 def main():
     # Read the data from the database
     df = read_data()
-    print(df.head())
     
     # Ensure 'datetime' is a datetime object
     df['datetime'] = pd.to_datetime(df['datetime'])

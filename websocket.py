@@ -3,7 +3,7 @@ import websockets
 import json
 
 async def listen():
-    uri = "wss://ws.eodhistoricaldata.com/ws/forex?api_token=demo"
+    uri = " wss://ws.eodhistoricaldata.com/ws/us?api_token=658e841fa1a6f9.30546411"
     try:
         async with websockets.connect(uri) as websocket:
             print("Connected to WebSocket")
@@ -11,7 +11,7 @@ async def listen():
             # Subscribe to EURUSD and AUDUSD tickers
             subscribe_message = json.dumps({
                 "action": "subscribe",
-                "symbols": "EURUSD"
+                "symbols": "AAPL"
             })
             await websocket.send(subscribe_message)
             print(f"Sent subscription message: {subscribe_message}")

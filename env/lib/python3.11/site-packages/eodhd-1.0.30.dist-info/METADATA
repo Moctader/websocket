@@ -1,0 +1,44 @@
+Metadata-Version: 2.1
+Name: eodhd
+Version: 1.0.30
+Summary: Official EODHD API Python Library
+Home-page: https://whittle.medium.com
+Author: Michael Whittle
+Author-email: michael@lifecycle-ps.com
+License: MIT
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: websockets >=11.0.3
+Requires-Dist: websocket-client >=1.6.3
+Requires-Dist: requests >=2.31.0
+Requires-Dist: rich >=13.5.2
+Requires-Dist: pandas >=2.1.0
+Requires-Dist: numpy >=1.25.2
+Requires-Dist: matplotlib >=3.7.2
+
+# Official EODHD APIs Python Library
+https://eodhd.com
+
+## Installation
+
+    python3 -m pip install eodhd -U
+
+## Note
+
+Demo API key below is provided by EOD Historial Data for testing purposes
+<https://eodhd.com/financial-apis/new-real-time-data-api-websockets?utm_source=github&utm_medium=eod&utm_campaign=python_lib>
+
+## Sample code and examples
+
+The files below contain examples of available functions
+
+* example_api.py - describes the functions that can be used in the apiclient file (APIClient class)
+* example_scanner.py - describes the functions that can be used in the apiclient file (ScannerClient class)
+* example_websockets.py - describes the functions that can be used in the websocketclient file (WebSocketClient class)
+
+New features will be added to the example files. The most relevant functions can be viewed directly in the code files.
