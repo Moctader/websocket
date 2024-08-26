@@ -24,8 +24,8 @@ def read_data():
     df = pd.read_sql_query(query, engine)
     return df
 
-def calculate_returns(df):
-    """Calculate daily and cumulative returns."""
+def calculate_returns(df, risk_free_rate=0.01):
+    """Calculate daily and cumulative returns, and Sharpe Ratio."""
     # Ensure 'datetime' is a datetime object and set as index
     df['datetime'] = pd.to_datetime(df['datetime'])
     df.set_index('datetime', inplace=True)
@@ -39,15 +39,22 @@ def calculate_returns(df):
     # Calculate average daily return
     average_daily_return = df['daily_return'].mean()
 
+    # Calculate standard deviation of daily returns
+    std_dev_daily_return = df['daily_return'].std()
+
     # Number of trading days in a year
     t = 252
 
     # Calculate annualized return
     annualized_return = (1 + average_daily_return) ** t - 1
 
-    # Print the result
+    # Calculate Sharpe Ratio
+    sharpe_ratio = (average_daily_return - risk_free_rate / t) / std_dev_daily_return
+
+    # Print the results
     print("Average Daily Return:", average_daily_return)
     print("Annualized Return:", annualized_return)
+    print("Sharpe Ratio:", sharpe_ratio)
 
     # Calculate cumulative returns
     df['cumulative_return'] = (1 + df['daily_return']).cumprod() - 1
